@@ -98,7 +98,7 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func NewDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "example.sqlite")
+	db, err := sql.Open("sqlite3", "last98.sqlite")
 	if err != nil {
 		log.Fatal("Database initialization error: ", err)
 	}
