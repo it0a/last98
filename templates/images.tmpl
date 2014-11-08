@@ -4,7 +4,7 @@
   <th>ID</th>
   <th>Description</th>
 </tr>
-{{ range $index, $element := .Images}}
+  {{ range $index, $element := .Images}}
   <tr>
     <td>
       {{$element.ID.Value}}
@@ -13,6 +13,6 @@
       {{$element.Description.Value}}
     </td>
   </tr>
-{{end}}
+  {{end}}
 </table>
 {{end}}

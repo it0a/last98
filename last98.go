@@ -26,6 +26,7 @@ var db *sql.DB
 func main() {
 	log.Printf("Starting server...")
 	start := time.Now()
+	//
 	var host = flag.String("host", "127.0.0.1", "IP of host to run web server on")
 	var port = flag.Int("port", 8080, "Port to run webserver on")
 	var staticPath = flag.String("staticPath", "static/", "Path to static files")
@@ -64,7 +65,7 @@ func IndexHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func getImages() []Image {
-	query := "SELECT * FROM images"
+	query := "SELECT id, description FROM images"
 	result, err := db.Query(query)
 	if err != nil {
 		log.Fatal("Error executing query: "+query, err)
