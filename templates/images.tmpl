@@ -1,0 +1,22 @@
+{{define "body"}}
+<form action="POST">
+  <input type="text">
+  <input type="submit">
+</form>
+<table border="1">
+<tr>
+  <th>ID</th>
+  <th>Description</th>
+</tr>
+  {{ range $index, $element := .Images}}
+  <tr>
+    <td>
+      {{$element.ID.Value}}
+    </td>
+    <td>
+      {{$element.Description.Value}}
+    </td>
+  </tr>
+  {{end}}
+</table>
+{{end}}
