@@ -12,7 +12,7 @@ func InitDB() {
 }
 
 func NewDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "last98.sqlite")
+	db, err := sql.Open("sqlite3", "database/last98.sqlite")
 	if err != nil {
 		log.Fatal("Database initialization error: ", err)
 	}

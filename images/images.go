@@ -40,7 +40,7 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 		Images []Image
 	}{page.Page{"Images"}, GetImages()}
 	tmpl := make(map[string]*template.Template)
-	tmpl["images.tmpl"] = template.Must(template.ParseFiles("../templates/base.tmpl", "../templates/images.tmpl"))
+	tmpl["images.tmpl"] = template.Must(template.ParseFiles("templates/base.tmpl", "templates/images.tmpl"))
 	err := tmpl["images.tmpl"].ExecuteTemplate(response, "base", data)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
