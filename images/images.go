@@ -2,7 +2,11 @@ package images
 
 import (
 	"database/sql"
+	"html/template"
+	"last98/database"
+	"last98/page"
 	"log"
+	"net/http"
 )
 
 type Image struct {
@@ -10,9 +14,9 @@ type Image struct {
 	Description sql.NullString
 }
 
-func GetImages(db *sql.DB) []Image {
+func GetImages() []Image {
 	query := "SELECT id, description FROM images"
-	result, err := db.Query(query)
+	result, err := database.DB.Query(query)
 	if err != nil {
 		log.Fatal("Error executing query: "+query, err)
 	}
@@ -27,4 +31,18 @@ func GetImages(db *sql.DB) []Image {
 		images = append(images, image)
 	}
 	return images
+}
+
+func ImagesHandler(response http.ResponseWriter, request *http.Request) {
+	log.Printf("Handling request with ImagesHandler")
+	data := struct {
+		Page   page.Page
+		Images []Image
+	}{page.Page{"Images"}, GetImages()}
+	tmpl := make(map[string]*template.Template)
+	tmpl["images.tmpl"] = template.Must(template.ParseFiles("../templates/base.tmpl", "../templates/images.tmpl"))
+	err := tmpl["images.tmpl"].ExecuteTemplate(response, "base", data)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+	}
 }
