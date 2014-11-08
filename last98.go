@@ -7,13 +7,12 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path"
 )
 
 type Page struct {
 	Title string
 }
-
-var templates = template.Must(template.ParseFiles("header.html"))
 
 func main() {
 	var host = flag.String("host", "127.0.0.1", "IP of host to run web server on")
@@ -23,6 +22,7 @@ func main() {
 	//
 	router := mux.NewRouter()
 	router.HandleFunc("/", IndexHandler)
+	router.HandleFunc("/about", AboutHandler)
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(*staticPath))))
 	//
 	addr := fmt.Sprintf("%s:%d", *host, *port)
@@ -36,10 +36,28 @@ func main() {
 
 func IndexHandler(response http.ResponseWriter, request *http.Request) {
 	log.Printf("Handling request with IndexHandler")
-	response.Header().Set("Content-type", "text/html")
-	err := request.ParseForm()
+	page := Page{"Index"}
+	fp := path.Join("templates", "index.html")
+	tmpl, err := template.ParseFiles(fp)
 	if err != nil {
-		http.Error(response, fmt.Sprintf("Error parsing url %v", err), 500)
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	templates.ExecuteTemplate(response, "header", Page{Title: "Home"})
+	if err := tmpl.Execute(response, page); err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func AboutHandler(response http.ResponseWriter, request *http.Request) {
+	log.Printf("Handling request with AboutHandler")
+	page := Page{"About"}
+	fp := path.Join("templates", "index.html")
+	tmpl, err := template.ParseFiles(fp)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.Execute(response, page); err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+	}
 }
