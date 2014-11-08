@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 	"html/template"
+	"last98/images"
 	"log"
 	"net/http"
 	"time"
@@ -14,11 +15,6 @@ import (
 
 type Page struct {
 	Title string
-}
-
-type Image struct {
-	ID          sql.NullInt64
-	Description sql.NullString
 }
 
 var db *sql.DB
@@ -64,31 +60,12 @@ func IndexHandler(response http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func getImages() []Image {
-	query := "SELECT id, description FROM images"
-	result, err := db.Query(query)
-	if err != nil {
-		log.Fatal("Error executing query: "+query, err)
-	}
-	log.Println("OK")
-	images := []Image{}
-	for result.Next() {
-		image := Image{}
-		err := result.Scan(&image.ID, &image.Description)
-		if err != nil {
-			log.Fatal("ERROR!", err)
-		}
-		images = append(images, image)
-	}
-	return images
-}
-
 func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 	log.Printf("Handling request with ImagesHandler")
 	data := struct {
 		Page   Page
-		Images []Image
-	}{Page{"Images"}, getImages()}
+		Images []images.Image
+	}{Page{"Images"}, images.GetImages(db)}
 	tmpl := make(map[string]*template.Template)
 	tmpl["images.tmpl"] = template.Must(template.ParseFiles("templates/base.tmpl", "templates/images.tmpl"))
 	err := tmpl["images.tmpl"].ExecuteTemplate(response, "base", data)
