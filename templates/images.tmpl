@@ -13,6 +13,12 @@
     <td>
       {{$element.Description.Value}}
     </td>
+    <td>
+      <form action="/images/delete" method="POST">
+        <input type="hidden" value="{{$element.ID.Value}}" name="id"/>
+        <input type="submit" value="Delete"/>
+      </form>
+    </td>
   </tr>
   {{end}}
 </table>

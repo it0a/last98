@@ -41,6 +41,19 @@ func GetImages() []Image {
 	return images
 }
 
+func DeleteImage(id string) {
+	log.Println("Deleting image ID " + id)
+	query := "DELETE FROM images WHERE id = $1"
+	stmt, err := database.DB.Prepare(query)
+	if err != nil {
+		log.Fatal("Couldn't prepare deletion statement!", err)
+	}
+	_, err = stmt.Exec(id)
+	if err != nil {
+		log.Fatal("Couldn't delete image!", err)
+	}
+}
+
 func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 	log.Printf("Handling request with ImagesHandler")
 	data := struct {
@@ -57,5 +70,10 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 
 func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
 	SaveImage(request.FormValue("description"))
+	http.Redirect(response, request, "/images", http.StatusFound)
+}
+
+func ImagesDeleteHandler(response http.ResponseWriter, request *http.Request) {
+	DeleteImage(request.FormValue("id"))
 	http.Redirect(response, request, "/images", http.StatusFound)
 }
