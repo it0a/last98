@@ -14,6 +14,14 @@ type Image struct {
 	Description sql.NullString
 }
 
+func SaveImage(description string) {
+	query := "INSERT INTO images(description) VALUES(\"" + description + "\")"
+	_, err := database.DB.Exec(query)
+	if err != nil {
+		log.Fatal("Couldn't save image!", err)
+	}
+}
+
 func GetImages() []Image {
 	query := "SELECT id, description FROM images"
 	result, err := database.DB.Query(query)
@@ -45,4 +53,9 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
+	SaveImage(request.FormValue("description"))
+	http.Redirect(response, request, "/images", http.StatusOK)
 }

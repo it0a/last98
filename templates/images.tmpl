@@ -1,8 +1,5 @@
 {{define "body"}}
-<form action="POST">
-  <input type="text">
-  <input type="submit">
-</form>
+<h1>Images</h1>
 <table border="1">
 <tr>
   <th>ID</th>
@@ -19,4 +16,8 @@
   </tr>
   {{end}}
 </table>
+<form action="/images" method="POST">
+  <input name="description" type="text"/>
+  <input type="submit"/>
+</form>
 {{end}}
