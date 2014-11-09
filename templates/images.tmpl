@@ -22,7 +22,8 @@
   </tr>
   {{end}}
 </table>
-<form action="/images" method="POST">
+<form action="/images" enctype="multipart/form-data" method="POST">
+  <input type="file" name="file">
   <input name="description" type="text"/>
   <input type="submit"/>
 </form>

@@ -4,10 +4,12 @@ import (
 	"database/sql"
 	"github.com/gorilla/mux"
 	"html/template"
+	"io"
 	"last98/database"
 	"last98/page"
 	"log"
 	"net/http"
+	"os"
 )
 
 type Image struct {
@@ -15,9 +17,26 @@ type Image struct {
 	Description sql.NullString
 }
 
-func SaveImage(description string) {
+func SaveImage(request *http.Request) {
+	file, header, err := request.FormFile("file")
+	if err != nil {
+		log.Fatal("Failed to retrieve file from form!", err)
+	}
+	defer file.Close()
+	out, err := os.Create("images/data/" + header.Filename)
+	if err != nil {
+		log.Fatal("Failed to write file!", err)
+	}
+	defer out.Close()
+	_, err = io.Copy(out, file)
+	if err != nil {
+		log.Fatal("Failed to copy the POST request into a new file!", err)
+	}
+	log.Printf("Successfully saved file: %s", header.Filename)
+	log.Printf("Writing record to the database...")
+	description := request.FormValue("description")
 	query := "INSERT INTO images(description) VALUES('" + description + "')"
-	_, err := database.DB.Exec(query)
+	_, err = database.DB.Exec(query)
 	if err != nil {
 		log.Fatal("Couldn't save image!", err)
 	}
@@ -66,7 +85,6 @@ func DeleteImage(id string) {
 }
 
 func ImagesHandler(response http.ResponseWriter, request *http.Request) {
-	log.Printf("Handling request with ImagesHandler")
 	data := struct {
 		Page   page.Page
 		Images []Image
@@ -81,7 +99,6 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 
 func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 	id := mux.Vars(request)["id"]
-	log.Printf("Handling request with ImageShowHandler => ID " + id)
 	image, err := GetImage(id)
 	if err != nil {
 		log.Println("Error occurred when retrieving image ID " + id + " - redirecting to images index")
@@ -100,7 +117,7 @@ func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
-	SaveImage(request.FormValue("description"))
+	SaveImage(request)
 	http.Redirect(response, request, "/images", http.StatusFound)
 }
 

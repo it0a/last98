@@ -17,7 +17,7 @@ func NewDB() *sql.DB {
 	if err != nil {
 		log.Fatal("Database initialization error: ", err)
 	}
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS images(id serial PRIMARY KEY, description TEXT)")
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS images(id serial PRIMARY KEY, description TEXT, data BYTEA)")
 	if err != nil {
 		log.Fatal("Couldn't create images table!", err)
 	}

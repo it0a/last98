@@ -13,7 +13,7 @@
       {{.Image.Description.Value}}
     </td>
     <td>
-      <form action="/images/delete" method="POST">
+      <form action="/images/delete"  method="POST">
         <input type="hidden" value="{{.Image.ID.Value}}" name="id"/>
         <input type="submit" value="Delete"/>
       </form>
