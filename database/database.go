@@ -19,7 +19,7 @@ func NewDB() *sql.DB {
 	}
 	_, err = db.Exec("CREATE TABLE IF NOT EXISTS images(id serial PRIMARY KEY, description TEXT)")
 	if err != nil {
-		log.Fatal("Couldn't create books table!", err)
+		log.Fatal("Couldn't create images table!", err)
 	}
 	return db
 }
