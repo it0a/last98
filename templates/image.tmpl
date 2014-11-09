@@ -1,0 +1,27 @@
+{{define "body"}}
+<h1>Image</h1>
+<table border="1">
+<tr>
+  <th>ID</th>
+  <th>Description</th>
+</tr>
+  <tr>
+    <td>
+      {{.Image.ID.Value}}
+    </td>
+    <td>
+      {{.Image.Description.Value}}
+    </td>
+    <td>
+      <form action="/images/delete" method="POST">
+        <input type="hidden" value="{{.Image.ID.Value}}" name="id"/>
+        <input type="submit" value="Delete"/>
+      </form>
+    </td>
+  </tr>
+</table>
+<form action="/images" method="POST">
+  <input name="description" type="text"/>
+  <input type="submit"/>
+</form>
+{{end}}

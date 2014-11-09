@@ -26,9 +26,13 @@ func main() {
 	//
 	router := mux.NewRouter()
 	router.HandleFunc("/", index.IndexHandler)
+	//
 	router.HandleFunc("/images", images.ImagesHandler).Methods("GET")
 	router.HandleFunc("/images", images.ImagesSaveHandler).Methods("POST")
 	router.HandleFunc("/images/delete", images.ImagesDeleteHandler).Methods("POST")
+	imageRouter := router.PathPrefix("/images/{id}").Subrouter()
+	imageRouter.Methods("GET").HandlerFunc(images.ImageShowHandler)
+	//
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(*staticPath))))
 	//
 	addr := fmt.Sprintf("%s:%d", *host, *port)
