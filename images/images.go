@@ -15,7 +15,7 @@ type Image struct {
 }
 
 func SaveImage(description string) {
-	query := "INSERT INTO images(description) VALUES(\"" + description + "\")"
+	query := "INSERT INTO images(description) VALUES('" + description + "')"
 	_, err := database.DB.Exec(query)
 	if err != nil {
 		log.Fatal("Couldn't save image!", err)
@@ -57,5 +57,5 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 
 func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
 	SaveImage(request.FormValue("description"))
-	http.Redirect(response, request, "/images", http.StatusOK)
+	http.Redirect(response, request, "/images", http.StatusFound)
 }

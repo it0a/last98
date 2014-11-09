@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	_ "github.com/lib/pq"
 	"log"
 )
 
@@ -12,11 +13,11 @@ func InitDB() {
 }
 
 func NewDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "database/last98.sqlite")
+	db, err := sql.Open("postgres", "user=it0a dbname=last98 sslmode=disable")
 	if err != nil {
 		log.Fatal("Database initialization error: ", err)
 	}
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS images(id INTEGER PRIMARY KEY, description TEXT)")
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS images(id serial PRIMARY KEY, description TEXT)")
 	if err != nil {
 		log.Fatal("Couldn't create books table!", err)
 	}
