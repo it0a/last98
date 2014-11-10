@@ -76,6 +76,9 @@ func GetImages() []ImageData {
 			log.Fatal("ERROR!", err)
 		}
 		image.Data = base64.StdEncoding.EncodeToString(data)
+		if image.Description.String == "" {
+			image.Description.String = "no description available"
+		}
 		images = append(images, image)
 	}
 	return images

@@ -11,4 +11,13 @@ $(document).ready( function() {
         /*jslint unparam:true*/
         $('input[type="file"]').closest("div").find('input[type="text"]').prop("value", label);
     });
+    $("[rel='tooltip']").tooltip();
+    $(".thumbnail").hover(
+        function () {
+            $(this).find('.caption').slideDown(250);
+        },
+        function () {
+            $(this).find('.caption').slideUp(250);
+        }
+    );
 });

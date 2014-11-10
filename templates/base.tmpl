@@ -11,6 +11,39 @@
     <script src="/static/js/base.js"></script>
   </head>
   <body>
+<nav class="navbar navbar-default" role="navigation">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/">last98</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li class="active"><a href="/images">Images</a></li>
+      </ul>
+      <form action="/images" enctype="multipart/form-data" method="POST" class="navbar-form navbar-right">
+        <div class="input-group">
+          <span class="input-group-btn">
+            <span class="btn btn-default btn-file">
+              Browse <input type="file" name="file" required/>
+            </span>
+          </span>
+          <input class="form-control file-label" type="text" readonly="" placeholder="No file chosen"></input>
+        </div>
+        <input class="form-control" name="description" type="text" placeholder="Description"/>
+        <button type="submit" class="btn btn-primary">Upload</button>
+      </form>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
     {{template "body" . }}
   </body>
 </html>
