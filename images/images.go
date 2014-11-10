@@ -1,10 +1,13 @@
 package images
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/base64"
 	"github.com/gorilla/mux"
+	"github.com/nfnt/resize"
 	"html/template"
+	"image/jpeg"
 	"io/ioutil"
 	"last98/database"
 	"last98/page"
@@ -12,56 +15,76 @@ import (
 	"net/http"
 )
 
-type Image struct {
+type ImageData struct {
 	ID          sql.NullInt64
 	Description sql.NullString
 	Data        string
 }
 
+func CreateThumbnail(imageData []byte) []byte {
+	reader := bytes.NewReader(imageData)
+	image, err := jpeg.Decode(reader)
+	if err != nil {
+		log.Fatal("Failed to generate thumbnail!", err)
+	}
+	tn := resize.Thumbnail(320, 320, image, resize.Lanczos3)
+	buf := new(bytes.Buffer)
+	err = jpeg.Encode(buf, tn, nil)
+	if err != nil {
+		log.Fatal("Couldn't encode the generated thumbnail!", err)
+	}
+	return buf.Bytes()
+}
+
 func SaveImage(request *http.Request) {
+	log.Println("Reading request data...")
+	description := request.FormValue("description")
 	file, _, err := request.FormFile("file")
 	if err != nil {
-		log.Fatal("Failed to retrieve file from form!", err)
+		log.Fatal("Failed to retrieve image from request!", err)
 	}
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
-		log.Fatal("Couldn't read the file into a byte array...")
+		log.Fatal("Couldn't read the file into a byte array...", err)
 	}
-
-	log.Printf("Writing record to the database...")
-	description := request.FormValue("description")
-	stmt, err := database.DB.Prepare("INSERT INTO images(description, data) VALUES($1, $2)")
+	//
+	log.Println("Creating thumbnail for new image...")
+	tn_data := CreateThumbnail(data)
+	log.Println("Writing new image data...")
+	stmt, err := database.DB.Prepare("INSERT INTO images(description, data, tn_data) VALUES($1, $2, $3)")
 	if err != nil {
 		log.Fatal("Error preparing insert statement!", err)
 	}
-	_, err = stmt.Exec(description, data)
+	_, err = stmt.Exec(description, data, tn_data)
 	if err != nil {
-		log.Fatal("Couldn't save image!", err)
+		log.Fatal("Couldn't save new image data!", err)
 	}
 }
 
-func GetImages() []Image {
-	query := "SELECT id, description FROM images"
+func GetImages() []ImageData {
+	query := "SELECT id, description, tn_data FROM images"
 	result, err := database.DB.Query(query)
 	if err != nil {
 		log.Fatal("Error executing query: "+query, err)
 	}
-	images := []Image{}
+	images := []ImageData{}
 	for result.Next() {
-		image := Image{}
-		err := result.Scan(&image.ID, &image.Description)
+		image := ImageData{}
+		data := []byte{}
+		err := result.Scan(&image.ID, &image.Description, &data)
 		if err != nil {
 			log.Fatal("ERROR!", err)
 		}
+		image.Data = base64.StdEncoding.EncodeToString(data)
 		images = append(images, image)
 	}
 	return images
 }
 
-func GetImage(id string) (Image, error) {
+func GetImage(id string) (ImageData, error) {
 	query := "SELECT id, description, data FROM images WHERE id = " + id
 	result := database.DB.QueryRow(query)
-	image := Image{}
+	image := ImageData{}
 	data := []byte{}
 	err := result.Scan(&image.ID, &image.Description, &data)
 	if err != nil && err != sql.ErrNoRows {
@@ -87,7 +110,7 @@ func DeleteImage(id string) {
 func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 	data := struct {
 		Page   page.Page
-		Images []Image
+		Images []ImageData
 	}{page.Page{"Images"}, GetImages()}
 	tmpl := make(map[string]*template.Template)
 	tmpl["images.tmpl"] = template.Must(template.ParseFiles("templates/base.tmpl", "templates/images.tmpl"))
@@ -106,7 +129,7 @@ func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 	}
 	data := struct {
 		Page  page.Page
-		Image Image
+		Image ImageData
 	}{page.Page{"Images"}, image}
 	tmpl := make(map[string]*template.Template)
 	tmpl["image.tmpl"] = template.Must(template.ParseFiles("templates/base.tmpl", "templates/image.tmpl"))

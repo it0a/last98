@@ -20,7 +20,7 @@
   {{ range $index, $element := .Images}}
   <div class="col-xs-6 col-md-3">
     <a href="images/{{$element.ID.Value}}" class="thumbnail">
-      <img data-src="holder.js/100%x180" alt="{{$element.Description.Value}}">
+      <img src="data:image/jpg;base64,{{$element.Data}}"/>
     </a>
   </div>
   {{end}}
