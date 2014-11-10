@@ -1,6 +1,22 @@
 {{define "body"}}
 <h1>Images</h1>
 <div class="row">
+  <div class="col-lg-6">
+    <form action="/images" enctype="multipart/form-data" method="POST">
+      <div class="input-group">
+        <span class="input-group-btn">
+          <span class="btn btn-default btn-file">
+            Browse <input type="file" name="file" required/>
+          </span>
+        </span>
+        <input class="form-control file-label" type="text" readonly="" placeholder="No file chosen"></input>
+      </div>
+      <input class="form-control" name="description" type="text" placeholder="Description"/>
+      <button type="submit" class="btn btn-primary">Upload</button>
+    </form>
+  </div>
+</div>
+<div class="row">
   {{ range $index, $element := .Images}}
   <div class="col-xs-6 col-md-3">
     <a href="images/{{$element.ID.Value}}" class="thumbnail">
@@ -9,9 +25,4 @@
   </div>
   {{end}}
 </div>
-<form action="/images" enctype="multipart/form-data" method="POST">
-  <input type="file" name="file" required/>
-  <input name="description" type="text"/>
-  <button type="submit" class="btn btn-default">Upload</button>
-</form>
 {{end}}
