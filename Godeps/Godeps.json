@@ -1,0 +1,26 @@
+{
+	"ImportPath": "last98",
+	"GoVersion": "go1.3.3",
+	"Deps": [
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "14f550f51af52180c2eefed15e5fd18d63c0a64a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
+		},
+		{
+			"ImportPath": "github.com/lib/pq",
+			"Rev": "7175accbed18058468c07811f76440d6e8d7cf19"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-sqlite3",
+			"Rev": "e5819757da0824da7e9140b1a862cafecf88159c"
+		},
+		{
+			"ImportPath": "github.com/nfnt/resize",
+			"Rev": "7e2ce0a2ea0c5407dbdc8de2c42cca5432c0a242"
+		}
+	]
+}
