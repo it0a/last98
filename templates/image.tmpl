@@ -1,3 +1,13 @@
 {{define "body"}}
-<img src="data:image/jpg;base64,{{.Image.Data}}"/>
+<div class="container-fluid">
+  <div class="row">
+    <div class="panel panel-default text-center">
+      <div class="panel-body">
+        <div class="col-md col-md-offset-3 col-xs-6 col-xs-offset-3">
+          <img src="data:image/jpg;base64,{{.Image.Data}}"/>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {{end}}
