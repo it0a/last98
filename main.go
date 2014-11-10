@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 	"last98/database"
@@ -10,15 +9,14 @@ import (
 	"last98/index"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
 func main() {
-	log.Printf("Starting server...")
+	log.Printf("Starting last98...")
 	start := time.Now()
 	//
-	var host = flag.String("host", "127.0.0.1", "IP of host to run web server on")
-	var port = flag.Int("port", 8080, "Port to run webserver on")
 	var staticPath = flag.String("staticPath", "static/", "Path to static files")
 	flag.Parse()
 	//
@@ -35,13 +33,19 @@ func main() {
 	//
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(*staticPath))))
 	//
-	addr := fmt.Sprintf("%s:%d", *host, *port)
 	elapsed := time.Since(start)
 	log.Printf("Initialization finished in %s", elapsed)
-	log.Printf("Listening on %s", addr)
 	//
-	err := http.ListenAndServe(addr, router)
+	err := http.ListenAndServe(":"+get_port(), router)
 	if err != nil {
 		log.Fatal("ListenAndServe error: ", err)
 	}
+}
+
+func get_port() string {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	return port
 }
