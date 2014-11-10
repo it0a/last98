@@ -22,6 +22,7 @@ type ImageData struct {
 }
 
 func CreateThumbnail(imageData []byte) []byte {
+	log.Println("Creating thumbnail for new image...")
 	reader := bytes.NewReader(imageData)
 	image, err := jpeg.Decode(reader)
 	if err != nil {
@@ -48,7 +49,6 @@ func SaveImage(request *http.Request) {
 		log.Fatal("Couldn't read the file into a byte array...", err)
 	}
 	//
-	log.Println("Creating thumbnail for new image...")
 	tn_data := CreateThumbnail(data)
 	log.Println("Writing new image data...")
 	stmt, err := database.DB.Prepare("INSERT INTO images(description, data, tn_data) VALUES($1, $2, $3)")
