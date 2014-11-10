@@ -8,7 +8,9 @@
   {{ range $index, $element := .Images}}
   <tr>
     <td>
-      {{$element.ID.Value}}
+      <a href="images/{{$element.ID.Value}}">
+        {{$element.ID.Value}}
+      </a>
     </td>
     <td>
       {{$element.Description.Value}}
@@ -23,7 +25,7 @@
   {{end}}
 </table>
 <form action="/images" enctype="multipart/form-data" method="POST">
-  <input type="file" name="file">
+  <input type="file" name="file" required/>
   <input name="description" type="text"/>
   <input type="submit"/>
 </form>

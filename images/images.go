@@ -2,41 +2,39 @@ package images
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"github.com/gorilla/mux"
 	"html/template"
-	"io"
+	"io/ioutil"
 	"last98/database"
 	"last98/page"
 	"log"
 	"net/http"
-	"os"
 )
 
 type Image struct {
 	ID          sql.NullInt64
 	Description sql.NullString
+	Data        string
 }
 
 func SaveImage(request *http.Request) {
-	file, header, err := request.FormFile("file")
+	file, _, err := request.FormFile("file")
 	if err != nil {
 		log.Fatal("Failed to retrieve file from form!", err)
 	}
-	defer file.Close()
-	out, err := os.Create("images/data/" + header.Filename)
+	data, err := ioutil.ReadAll(file)
 	if err != nil {
-		log.Fatal("Failed to write file!", err)
+		log.Fatal("Couldn't read the file into a byte array...")
 	}
-	defer out.Close()
-	_, err = io.Copy(out, file)
-	if err != nil {
-		log.Fatal("Failed to copy the POST request into a new file!", err)
-	}
-	log.Printf("Successfully saved file: %s", header.Filename)
+
 	log.Printf("Writing record to the database...")
 	description := request.FormValue("description")
-	query := "INSERT INTO images(description) VALUES('" + description + "')"
-	_, err = database.DB.Exec(query)
+	stmt, err := database.DB.Prepare("INSERT INTO images(description, data) VALUES($1, $2)")
+	if err != nil {
+		log.Fatal("Error preparing insert statement!", err)
+	}
+	_, err = stmt.Exec(description, data)
 	if err != nil {
 		log.Fatal("Couldn't save image!", err)
 	}
@@ -61,13 +59,15 @@ func GetImages() []Image {
 }
 
 func GetImage(id string) (Image, error) {
-	query := "SELECT id, description FROM images WHERE id = " + id
+	query := "SELECT id, description, data FROM images WHERE id = " + id
 	result := database.DB.QueryRow(query)
 	image := Image{}
-	err := result.Scan(&image.ID, &image.Description)
+	data := []byte{}
+	err := result.Scan(&image.ID, &image.Description, &data)
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal("Unhandled error in GetImage:", err)
 	}
+	image.Data = base64.StdEncoding.EncodeToString(data)
 	return image, err
 }
 
