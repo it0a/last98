@@ -21,44 +21,54 @@ type ImageData struct {
 	Data        string
 }
 
-func CreateThumbnail(imageData []byte) []byte {
+func CreateThumbnail(imageData []byte) ([]byte, error) {
 	log.Println("Creating thumbnail for new image...")
 	reader := bytes.NewReader(imageData)
 	image, err := jpeg.Decode(reader)
 	if err != nil {
-		log.Fatal("Failed to generate thumbnail!", err)
+		log.Println("Failed to decode jpeg image data: ", err)
+		return nil, err
 	}
 	tn := resize.Thumbnail(320, 320, image, resize.Lanczos3)
 	buf := new(bytes.Buffer)
 	err = jpeg.Encode(buf, tn, nil)
 	if err != nil {
-		log.Fatal("Couldn't encode the generated thumbnail!", err)
+		log.Println("Couldn't encode the generated thumbnail!", err)
+		return nil, err
 	}
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
 
-func SaveImage(request *http.Request) {
+func SaveImage(request *http.Request) error {
 	log.Println("Reading request data...")
 	description := request.FormValue("description")
 	file, _, err := request.FormFile("file")
 	if err != nil {
-		log.Fatal("Failed to retrieve image from request!", err)
+		log.Println("Failed to retrieve file from request: ", err)
+		return err
 	}
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
-		log.Fatal("Couldn't read the file into a byte array...", err)
+		log.Println("Couldn't read the file into []byte: ", err)
+		return err
 	}
-	//
-	tn_data := CreateThumbnail(data)
+	tn_data, err := CreateThumbnail(data)
+	if err != nil {
+		log.Println("Failed to create new Thumbnail!")
+		return err
+	}
 	log.Println("Writing new image data...")
 	stmt, err := database.DB.Prepare("INSERT INTO images(description, data, tn_data) VALUES($1, $2, $3)")
 	if err != nil {
-		log.Fatal("Error preparing insert statement!", err)
+		log.Println("Failed to prepare save image query: ", err)
+		return err
 	}
 	_, err = stmt.Exec(description, data, tn_data)
 	if err != nil {
-		log.Fatal("Couldn't save new image data!", err)
+		log.Println("Failed to save new image data to the database: ", err)
+		return err
 	}
+	return nil
 }
 
 func isEndOfRow(i int) bool {
@@ -148,7 +158,10 @@ func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
-	SaveImage(request)
+	err := SaveImage(request)
+	if err != nil {
+		log.Println("Failed to save new image!")
+	}
 	http.Redirect(response, request, "/images", http.StatusFound)
 }
 
