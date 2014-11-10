@@ -1,8 +1,12 @@
 {{define "body"}}
 <div class="container-fluid">
   <div class="row">
-    {{ range $index, $element := .Images}}
-    <div class="col-md-3">
+  {{ range $index, $element := .Images}}
+  {{ if isEndOfRow $index }}
+  </div>
+  <div class="row">
+  {{end}}
+    <div class="col-xs-6 col-md-3">
       <a href="images/{{$element.ID.Value}}">
         <div class="thumbnail">
           <div class="caption">
@@ -12,7 +16,7 @@
         </div>
       </a>
     </div>
-    {{end}}
+  {{end}}
   </div>
 </div>
 </div>

@@ -61,6 +61,10 @@ func SaveImage(request *http.Request) {
 	}
 }
 
+func isEndOfRow(i int) bool {
+	return ((i > 0) && (i%4 == 0))
+}
+
 func GetImages() []ImageData {
 	query := "SELECT id, description, tn_data FROM images"
 	result, err := database.DB.Query(query)
@@ -115,8 +119,9 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 		Page   page.Page
 		Images []ImageData
 	}{page.Page{"Images"}, GetImages()}
+	funcs := template.FuncMap{"isEndOfRow": isEndOfRow}
 	tmpl := make(map[string]*template.Template)
-	tmpl["images.tmpl"] = template.Must(template.ParseFiles("templates/base.tmpl", "templates/images.tmpl"))
+	tmpl["images.tmpl"] = template.Must(template.New("").Funcs(funcs).ParseFiles("templates/base.tmpl", "templates/images.tmpl"))
 	err := tmpl["images.tmpl"].ExecuteTemplate(response, "base", data)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
