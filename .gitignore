@@ -24,3 +24,6 @@ _testmain.go
 *.prof
 
 images/data
+
+# Don't need all of the Godeps in the repo
+Godeps
