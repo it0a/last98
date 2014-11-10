@@ -2,8 +2,9 @@ package database
 
 import (
 	"database/sql"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"log"
+	"os"
 )
 
 var DB *sql.DB
@@ -13,7 +14,16 @@ func InitDB() {
 }
 
 func NewDB() *sql.DB {
-	db, err := sql.Open("postgres", "user=it0a dbname=last98 sslmode=disable")
+	url := os.Getenv("DATABASE_URL")
+	log.Println("Attempting to connect with url => " + url)
+	if url == "" {
+		log.Fatal("DATABASE_URL is not set!")
+	}
+	connection, err := pq.ParseURL(url)
+	if err != nil {
+		log.Fatal("Failed parsing url => "+url, err)
+	}
+	db, err := sql.Open("postgres", connection)
 	if err != nil {
 		log.Fatal("Database initialization error: ", err)
 	}
