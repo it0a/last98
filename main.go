@@ -6,10 +6,9 @@ import (
 	"github.com/it0a/last98/database"
 	"github.com/it0a/last98/images"
 	"github.com/it0a/last98/index"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/it0a/last98/initialize"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -36,16 +35,10 @@ func main() {
 	elapsed := time.Since(start)
 	log.Printf("Initialization finished in %s", elapsed)
 	//
-	err := http.ListenAndServe(":"+get_port(), router)
+	var evr initialize.EnvVarReader
+	log.Println("Using port " + initialize.ReadPort(evr))
+	err := http.ListenAndServe(":"+initialize.ReadPort(evr), router)
 	if err != nil {
 		log.Fatal("ListenAndServe error: ", err)
 	}
-}
-
-func get_port() string {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	return port
 }
