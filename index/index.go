@@ -1,8 +1,8 @@
 package index
 
 import (
+	"github.com/it0a/last98/page"
 	"html/template"
-	"last98/page"
 	"log"
 	"net/http"
 )

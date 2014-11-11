@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 	"github.com/gorilla/mux"
+	"github.com/it0a/last98/database"
+	"github.com/it0a/last98/images"
+	"github.com/it0a/last98/index"
 	_ "github.com/mattn/go-sqlite3"
-	"last98/database"
-	"last98/images"
-	"last98/index"
 	"log"
 	"net/http"
 	"os"
