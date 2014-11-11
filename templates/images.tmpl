@@ -9,7 +9,7 @@
   <!--</div>-->
   <div class="row">
   {{ range $index, $element := .Images}}
-  {{ if isEndOfRow $index }}
+  {{ if IsEndOfRow $index }}
   </div>
   <div class="row">
   {{end}}
