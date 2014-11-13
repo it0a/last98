@@ -15,10 +15,29 @@ import (
 	"net/http"
 )
 
+type ImageRepository interface {
+	FindById(id string) (ImageData, error)
+}
+
+type ImageReader struct{}
+
 type ImageData struct {
 	ID          sql.NullInt64
 	Description sql.NullString
 	Data        string
+}
+
+func (imageReader ImageReader) FindById(id string) (ImageData, error) {
+	query := "SELECT id, description, data FROM images WHERE id = " + id
+	result := database.DB.QueryRow(query)
+	image := ImageData{}
+	data := []byte{}
+	err := result.Scan(&image.ID, &image.Description, &data)
+	if err != nil && err != sql.ErrNoRows {
+		log.Fatal("Unhandled error in GetImage:", err)
+	}
+	image.Data = base64.StdEncoding.EncodeToString(data)
+	return image, err
 }
 
 func CreateThumbnail(imageData []byte) ([]byte, error) {
@@ -98,19 +117,6 @@ func GetImages() []ImageData {
 	return images
 }
 
-func GetImage(id string) (ImageData, error) {
-	query := "SELECT id, description, data FROM images WHERE id = " + id
-	result := database.DB.QueryRow(query)
-	image := ImageData{}
-	data := []byte{}
-	err := result.Scan(&image.ID, &image.Description, &data)
-	if err != nil && err != sql.ErrNoRows {
-		log.Fatal("Unhandled error in GetImage:", err)
-	}
-	image.Data = base64.StdEncoding.EncodeToString(data)
-	return image, err
-}
-
 func DeleteImage(id string) {
 	log.Println("Deleting image ID " + id)
 	query := "DELETE FROM images WHERE id = $1"
@@ -138,9 +144,14 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 	}
 }
 
+func ReadImage(id string, imageRepository ImageRepository) (ImageData, error) {
+	imageData, err := imageRepository.FindById(id)
+	return imageData, err
+}
+
 func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 	id := mux.Vars(request)["id"]
-	image, err := GetImage(id)
+	image, err := ReadImage(id, ImageReader{})
 	if err != nil {
 		log.Println("Error occurred when retrieving image ID " + id + " - redirecting to images index")
 		http.Redirect(response, request, "/images", http.StatusFound)
