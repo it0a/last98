@@ -3,12 +3,10 @@ package index
 import (
 	"github.com/it0a/last98/page"
 	"html/template"
-	"log"
 	"net/http"
 )
 
 func IndexHandler(response http.ResponseWriter, request *http.Request) {
-	log.Printf("Handling request with IndexHandler")
 	data := struct {
 		Page page.Page
 	}{page.Page{"Index"}}
