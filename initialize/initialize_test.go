@@ -16,7 +16,9 @@ func (s stubEnvReader) ReadPort() string {
 }
 
 var _ = Describe("Init", func() {
+
 	Describe("reading the $PORT env var", func() {
+
 		Context("when it is not set", func() {
 			var envReader stubEnvReader
 			envReader.port = ""
@@ -24,6 +26,7 @@ var _ = Describe("Init", func() {
 				Expect(ReadPort(envReader)).To(Equal("8080"))
 			})
 		})
+
 		Context("when it is set", func() {
 			var envReader stubEnvReader
 			envReader.port = "1234"
@@ -31,5 +34,6 @@ var _ = Describe("Init", func() {
 				Expect(ReadPort(envReader)).To(Equal("1234"))
 			})
 		})
+
 	})
 })
