@@ -103,7 +103,10 @@ func SaveImage(newImage NewImageData, imageRepository ImageRepository) error {
 
 func DeleteImage(id string, imageRepository ImageRepository) error {
 	err := imageRepository.Delete(id)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func IsEndOfRow(i int) bool {
