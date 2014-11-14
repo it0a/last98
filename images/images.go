@@ -17,9 +17,11 @@ import (
 
 type ImageRepository interface {
 	FindById(id string) (ImageData, error)
+	Delete(id string) error
+	Save(newImage NewImageData) error
 }
 
-type ImageReader struct{}
+type ImageDatabase struct{}
 
 type ImageData struct {
 	ID          sql.NullInt64
@@ -27,17 +29,50 @@ type ImageData struct {
 	Data        string
 }
 
-func (imageReader ImageReader) FindById(id string) (ImageData, error) {
+func (i ImageDatabase) FindById(id string) (ImageData, error) {
 	query := "SELECT id, description, data FROM images WHERE id = " + id
 	result := database.DB.QueryRow(query)
 	image := ImageData{}
 	data := []byte{}
 	err := result.Scan(&image.ID, &image.Description, &data)
 	if err != nil && err != sql.ErrNoRows {
-		log.Fatal("Unhandled error in GetImage:", err)
+		log.Println("Unhandled error in GetImage:", err)
+		return image, err
 	}
 	image.Data = base64.StdEncoding.EncodeToString(data)
 	return image, err
+}
+
+func (i ImageDatabase) Delete(id string) error {
+	query := "DELETE FROM images WHERE id = $1"
+	stmt, err := database.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (i ImageDatabase) Save(newImage NewImageData) error {
+	stmt, err := database.DB.Prepare("INSERT INTO images(description, data, tn_data) VALUES($1, $2, $3)")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(newImage.Description, newImage.Image, newImage.Thumb)
+	if err != nil {
+		log.Println("Failed to save new image data to the database: ", err)
+		return err
+	}
+	return nil
+}
+
+type NewImageData struct {
+	Description string
+	Image       []byte
+	Thumb       []byte
 }
 
 func CreateThumbnail(imageData []byte) ([]byte, error) {
@@ -58,36 +93,17 @@ func CreateThumbnail(imageData []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func SaveImage(request *http.Request) error {
-	log.Println("Reading request data...")
-	description := request.FormValue("description")
-	file, _, err := request.FormFile("file")
+func SaveImage(newImage NewImageData, imageRepository ImageRepository) error {
+	err := imageRepository.Save(newImage)
 	if err != nil {
-		log.Println("Failed to retrieve file from request: ", err)
-		return err
-	}
-	data, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Println("Couldn't read the file into []byte: ", err)
-		return err
-	}
-	tn_data, err := CreateThumbnail(data)
-	if err != nil {
-		log.Println("Failed to create new Thumbnail!")
-		return err
-	}
-	log.Println("Writing new image data...")
-	stmt, err := database.DB.Prepare("INSERT INTO images(description, data, tn_data) VALUES($1, $2, $3)")
-	if err != nil {
-		log.Println("Failed to prepare save image query: ", err)
-		return err
-	}
-	_, err = stmt.Exec(description, data, tn_data)
-	if err != nil {
-		log.Println("Failed to save new image data to the database: ", err)
 		return err
 	}
 	return nil
+}
+
+func DeleteImage(id string, imageRepository ImageRepository) error {
+	err := imageRepository.Delete(id)
+	return err
 }
 
 func IsEndOfRow(i int) bool {
@@ -117,19 +133,6 @@ func GetImages() []ImageData {
 	return images
 }
 
-func DeleteImage(id string) {
-	log.Println("Deleting image ID " + id)
-	query := "DELETE FROM images WHERE id = $1"
-	stmt, err := database.DB.Prepare(query)
-	if err != nil {
-		log.Fatal("Couldn't prepare deletion statement!", err)
-	}
-	_, err = stmt.Exec(id)
-	if err != nil {
-		log.Fatal("Couldn't delete image!", err)
-	}
-}
-
 func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 	data := struct {
 		Page   page.Page
@@ -151,7 +154,7 @@ func ReadImage(id string, imageRepository ImageRepository) (ImageData, error) {
 
 func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 	id := mux.Vars(request)["id"]
-	image, err := ReadImage(id, ImageReader{})
+	image, err := ReadImage(id, ImageDatabase{})
 	if err != nil {
 		log.Println("Error occurred when retrieving image ID " + id + " - redirecting to images index")
 		http.Redirect(response, request, "/images", http.StatusFound)
@@ -169,14 +172,28 @@ func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
-	err := SaveImage(request)
+	description := request.FormValue("description")
+	file, _, err := request.FormFile("file")
 	if err != nil {
-		log.Println("Failed to save new image!")
+		return
+	}
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return
+	}
+	thumb, err := CreateThumbnail(data)
+	if err != nil {
+		return
+	}
+	err = SaveImage(NewImageData{Description: description, Image: data, Thumb: thumb}, ImageDatabase{})
+	if err != nil {
+		return
 	}
 	http.Redirect(response, request, "/images", http.StatusFound)
 }
 
 func ImagesDeleteHandler(response http.ResponseWriter, request *http.Request) {
-	DeleteImage(request.FormValue("id"))
+	id := request.FormValue("id")
+	DeleteImage(id, ImageDatabase{})
 	http.Redirect(response, request, "/images", http.StatusFound)
 }
