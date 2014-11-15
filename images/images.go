@@ -15,32 +15,51 @@ import (
 	"net/http"
 )
 
+type ImageEncoder interface {
+	EncodedImage() (string, error)
+	EncodedThumb() (string, error)
+}
+
+func (i ImageData) EncodedImage() string {
+	encData := base64.StdEncoding.EncodeToString(i.Image)
+	return encData
+}
+
+func (i ImageData) EncodedThumb() string {
+	encData := base64.StdEncoding.EncodeToString(i.Thumb)
+	return encData
+}
+
 type ImageRepository interface {
 	FindById(id string) (ImageData, error)
 	Delete(id string) error
-	Save(newImage NewImageData) error
+	Save(n ImageData) error
 }
 
 type ImageDatabase struct{}
 
 type ImageData struct {
-	ID          sql.NullInt64
-	Description sql.NullString
-	Data        string
+	ID          int64
+	Description string
+	Image       []byte
+	Thumb       []byte
 }
 
 func (i ImageDatabase) FindById(id string) (ImageData, error) {
 	query := "SELECT id, description, data FROM images WHERE id = " + id
 	result := database.DB.QueryRow(query)
-	image := ImageData{}
-	data := []byte{}
-	err := result.Scan(&image.ID, &image.Description, &data)
+	data := struct {
+		ID          sql.NullInt64
+		Description sql.NullString
+		Image       []byte
+	}{}
+	err := result.Scan(&data.ID, &data.Description, &data.Image)
 	if err != nil && err != sql.ErrNoRows {
 		log.Println("Unhandled error in GetImage:", err)
-		return image, err
+		return ImageData{}, err
 	}
-	image.Data = base64.StdEncoding.EncodeToString(data)
-	return image, err
+	image := ImageData{data.ID.Int64, data.Description.String, data.Image, nil}
+	return image, nil
 }
 
 func (i ImageDatabase) Delete(id string) error {
@@ -56,23 +75,17 @@ func (i ImageDatabase) Delete(id string) error {
 	return nil
 }
 
-func (i ImageDatabase) Save(newImage NewImageData) error {
+func (i ImageDatabase) Save(id ImageData) error {
 	stmt, err := database.DB.Prepare("INSERT INTO images(description, data, tn_data) VALUES($1, $2, $3)")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(newImage.Description, newImage.Image, newImage.Thumb)
+	_, err = stmt.Exec(id.Description, id.Image, id.Thumb)
 	if err != nil {
 		log.Println("Failed to save new image data to the database: ", err)
 		return err
 	}
 	return nil
-}
-
-type NewImageData struct {
-	Description string
-	Image       []byte
-	Thumb       []byte
 }
 
 func CreateThumbnail(imageData []byte) ([]byte, error) {
@@ -93,16 +106,16 @@ func CreateThumbnail(imageData []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func SaveImage(newImage NewImageData, imageRepository ImageRepository) error {
-	err := imageRepository.Save(newImage)
+func SaveImage(id ImageData, ir ImageRepository) error {
+	err := ir.Save(id)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func DeleteImage(id string, imageRepository ImageRepository) error {
-	err := imageRepository.Delete(id)
+func DeleteImage(id string, ir ImageRepository) error {
+	err := ir.Delete(id)
 	if err != nil {
 		return err
 	}
@@ -121,15 +134,18 @@ func GetImages() []ImageData {
 	}
 	images := []ImageData{}
 	for result.Next() {
-		image := ImageData{}
-		data := []byte{}
-		err := result.Scan(&image.ID, &image.Description, &data)
+		data := struct {
+			ID          sql.NullInt64
+			Description sql.NullString
+			Thumb       []byte
+		}{}
+		err := result.Scan(&data.ID, &data.Description, &data.Thumb)
 		if err != nil {
 			log.Fatal("ERROR!", err)
 		}
-		image.Data = base64.StdEncoding.EncodeToString(data)
-		if image.Description.String == "" {
-			image.Description.String = "no description available"
+		image := ImageData{data.ID.Int64, data.Description.String, nil, data.Thumb}
+		if image.Description == "" {
+			image.Description = "no description available"
 		}
 		images = append(images, image)
 	}
@@ -188,7 +204,7 @@ func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		return
 	}
-	err = SaveImage(NewImageData{Description: description, Image: data, Thumb: thumb}, ImageDatabase{})
+	err = SaveImage(ImageData{Description: description, Image: data, Thumb: thumb}, ImageDatabase{})
 	if err != nil {
 		return
 	}
