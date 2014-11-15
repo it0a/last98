@@ -16,20 +16,25 @@ import (
 	"strconv"
 )
 
-type ImageDataEncoder interface {
-	Encode() (string, error)
-}
-
-func (i ImageData) Encode() string {
-	encData := base64.StdEncoding.EncodeToString(i.Data)
-	return encData
-}
-
 type ImageModel struct {
 	ID          int64
 	Description string
 	Image       ImageData
 	Thumb       ImageData
+}
+
+type ImageDataI interface {
+	Encode() (string, error)
+	CreateThumbnail([]byte, error)
+}
+
+type ImageData struct {
+	Data []byte
+}
+
+func (i ImageData) Encode() string {
+	encData := base64.StdEncoding.EncodeToString(i.Data)
+	return encData
 }
 
 type ImageRepository interface {
@@ -39,10 +44,6 @@ type ImageRepository interface {
 }
 
 type ImageDatabase struct{}
-
-type ImageData struct {
-	Data []byte
-}
 
 func (i ImageDatabase) FindById(id int64) (ImageModel, error) {
 	query := "SELECT id, description, data FROM images WHERE id = " + strconv.FormatInt(id, 10)
@@ -91,24 +92,6 @@ func (i ImageDatabase) Save(im ImageModel) error {
 	return nil
 }
 
-func CreateThumbnail(imageData []byte) ([]byte, error) {
-	log.Println("Creating thumbnail for new image...")
-	reader := bytes.NewReader(imageData)
-	image, err := jpeg.Decode(reader)
-	if err != nil {
-		log.Println("Failed to decode jpeg image data: ", err)
-		return nil, err
-	}
-	tn := resize.Thumbnail(320, 320, image, resize.Lanczos3)
-	buf := new(bytes.Buffer)
-	err = jpeg.Encode(buf, tn, nil)
-	if err != nil {
-		log.Println("Couldn't encode the generated thumbnail!", err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
 func SaveImage(im ImageModel, ir ImageRepository) error {
 	err := ir.Save(im)
 	if err != nil {
@@ -123,6 +106,20 @@ func DeleteImage(id int64, ir ImageRepository) error {
 		return err
 	}
 	return nil
+}
+
+func (i ImageModel) CreateThumbnail() ([]byte, error) {
+	image, err := jpeg.Decode(bytes.NewReader(i.Image.Data))
+	if err != nil {
+		return nil, err
+	}
+	tn := resize.Thumbnail(320, 320, image, resize.Lanczos3)
+	buf := new(bytes.Buffer)
+	err = jpeg.Encode(buf, tn, nil)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func IsEndOfRow(i int) bool {
@@ -197,22 +194,19 @@ func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
-	newImage := ImageModel{}
-	newImage.Description = request.FormValue("description")
+	newImage := ImageModel{Description: request.FormValue("description")}
 	file, _, err := request.FormFile("file")
 	if err != nil {
+		log.Println("Error occurred when retrieving the file from the request form.")
 		return
 	}
 	iData, err := ioutil.ReadAll(file)
 	if err != nil {
-		return
-	}
-	tData, err := CreateThumbnail(iData)
-	if err != nil {
+		log.Println("Error occurred when reading the uploaded image - redirecting to images index.")
 		return
 	}
 	newImage.Image.Data = iData
-	newImage.Thumb.Data = tData
+	newImage.Thumb.Data, _ = newImage.CreateThumbnail()
 	err = SaveImage(newImage, ImageDatabase{})
 	if err != nil {
 		return
