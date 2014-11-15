@@ -13,40 +13,39 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 )
 
-type ImageEncoder interface {
-	EncodedImage() (string, error)
-	EncodedThumb() (string, error)
+type ImageDataEncoder interface {
+	Encode() (string, error)
 }
 
-func (i ImageData) EncodedImage() string {
-	encData := base64.StdEncoding.EncodeToString(i.Image)
+func (i ImageData) Encode() string {
+	encData := base64.StdEncoding.EncodeToString(i.Data)
 	return encData
 }
 
-func (i ImageData) EncodedThumb() string {
-	encData := base64.StdEncoding.EncodeToString(i.Thumb)
-	return encData
+type ImageModel struct {
+	ID          int64
+	Description string
+	Image       ImageData
+	Thumb       ImageData
 }
 
 type ImageRepository interface {
-	FindById(id string) (ImageData, error)
-	Delete(id string) error
-	Save(n ImageData) error
+	FindById(id int64) (ImageModel, error)
+	Delete(id int64) error
+	Save(im ImageModel) error
 }
 
 type ImageDatabase struct{}
 
 type ImageData struct {
-	ID          int64
-	Description string
-	Image       []byte
-	Thumb       []byte
+	Data []byte
 }
 
-func (i ImageDatabase) FindById(id string) (ImageData, error) {
-	query := "SELECT id, description, data FROM images WHERE id = " + id
+func (i ImageDatabase) FindById(id int64) (ImageModel, error) {
+	query := "SELECT id, description, data FROM images WHERE id = " + strconv.FormatInt(id, 10)
 	result := database.DB.QueryRow(query)
 	data := struct {
 		ID          sql.NullInt64
@@ -56,13 +55,17 @@ func (i ImageDatabase) FindById(id string) (ImageData, error) {
 	err := result.Scan(&data.ID, &data.Description, &data.Image)
 	if err != nil && err != sql.ErrNoRows {
 		log.Println("Unhandled error in GetImage:", err)
-		return ImageData{}, err
+		return ImageModel{}, err
 	}
-	image := ImageData{data.ID.Int64, data.Description.String, data.Image, nil}
+	image := ImageModel{
+		ID:          data.ID.Int64,
+		Description: data.Description.String,
+		Image:       ImageData{data.Image},
+	}
 	return image, nil
 }
 
-func (i ImageDatabase) Delete(id string) error {
+func (i ImageDatabase) Delete(id int64) error {
 	query := "DELETE FROM images WHERE id = $1"
 	stmt, err := database.DB.Prepare(query)
 	if err != nil {
@@ -75,12 +78,12 @@ func (i ImageDatabase) Delete(id string) error {
 	return nil
 }
 
-func (i ImageDatabase) Save(id ImageData) error {
+func (i ImageDatabase) Save(im ImageModel) error {
 	stmt, err := database.DB.Prepare("INSERT INTO images(description, data, tn_data) VALUES($1, $2, $3)")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(id.Description, id.Image, id.Thumb)
+	_, err = stmt.Exec(im.Description, im.Image.Data, im.Thumb.Data)
 	if err != nil {
 		log.Println("Failed to save new image data to the database: ", err)
 		return err
@@ -106,15 +109,15 @@ func CreateThumbnail(imageData []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func SaveImage(id ImageData, ir ImageRepository) error {
-	err := ir.Save(id)
+func SaveImage(im ImageModel, ir ImageRepository) error {
+	err := ir.Save(im)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func DeleteImage(id string, ir ImageRepository) error {
+func DeleteImage(id int64, ir ImageRepository) error {
 	err := ir.Delete(id)
 	if err != nil {
 		return err
@@ -126,13 +129,13 @@ func IsEndOfRow(i int) bool {
 	return ((i > 0) && (i%4 == 0))
 }
 
-func GetImages() []ImageData {
+func GetImages() []ImageModel {
 	query := "SELECT id, description, tn_data FROM images"
 	result, err := database.DB.Query(query)
 	if err != nil {
 		log.Fatal("Error executing query: "+query, err)
 	}
-	images := []ImageData{}
+	images := []ImageModel{}
 	for result.Next() {
 		data := struct {
 			ID          sql.NullInt64
@@ -143,7 +146,7 @@ func GetImages() []ImageData {
 		if err != nil {
 			log.Fatal("ERROR!", err)
 		}
-		image := ImageData{data.ID.Int64, data.Description.String, nil, data.Thumb}
+		image := ImageModel{data.ID.Int64, data.Description.String, ImageData{}, ImageData{data.Thumb}}
 		if image.Description == "" {
 			image.Description = "no description available"
 		}
@@ -155,7 +158,7 @@ func GetImages() []ImageData {
 func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 	data := struct {
 		Page   page.Page
-		Images []ImageData
+		Images []ImageModel
 	}{page.Page{"Images"}, GetImages()}
 	funcs := template.FuncMap{"IsEndOfRow": IsEndOfRow}
 	tmpl := make(map[string]*template.Template)
@@ -166,21 +169,24 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func ReadImage(id string, imageRepository ImageRepository) (ImageData, error) {
-	imageData, err := imageRepository.FindById(id)
-	return imageData, err
+func ReadImage(id int64, ir ImageRepository) (ImageModel, error) {
+	imageModel, err := ir.FindById(id)
+	return imageModel, err
 }
 
 func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
-	id := mux.Vars(request)["id"]
+	id, err := strconv.ParseInt(mux.Vars(request)["id"], 10, 64)
+	if err != nil {
+		panic(err)
+	}
 	image, err := ReadImage(id, ImageDatabase{})
 	if err != nil {
-		log.Println("Error occurred when retrieving image ID " + id + " - redirecting to images index")
+		log.Println("Error occurred when retrieving image ID - redirecting to images index")
 		http.Redirect(response, request, "/images", http.StatusFound)
 	}
 	data := struct {
 		Page  page.Page
-		Image ImageData
+		Image ImageModel
 	}{page.Page{"Images"}, image}
 	tmpl := make(map[string]*template.Template)
 	tmpl["image.tmpl"] = template.Must(template.ParseFiles("templates/base.tmpl", "templates/image.tmpl"))
@@ -191,20 +197,23 @@ func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
-	description := request.FormValue("description")
+	newImage := ImageModel{}
+	newImage.Description = request.FormValue("description")
 	file, _, err := request.FormFile("file")
 	if err != nil {
 		return
 	}
-	data, err := ioutil.ReadAll(file)
+	iData, err := ioutil.ReadAll(file)
 	if err != nil {
 		return
 	}
-	thumb, err := CreateThumbnail(data)
+	tData, err := CreateThumbnail(iData)
 	if err != nil {
 		return
 	}
-	err = SaveImage(ImageData{Description: description, Image: data, Thumb: thumb}, ImageDatabase{})
+	newImage.Image.Data = iData
+	newImage.Thumb.Data = tData
+	err = SaveImage(newImage, ImageDatabase{})
 	if err != nil {
 		return
 	}
@@ -212,7 +221,10 @@ func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func ImagesDeleteHandler(response http.ResponseWriter, request *http.Request) {
-	id := request.FormValue("id")
+	id, err := strconv.ParseInt(mux.Vars(request)["id"], 10, 64)
+	if err != nil {
+		panic(err)
+	}
 	DeleteImage(id, ImageDatabase{})
 	http.Redirect(response, request, "/images", http.StatusFound)
 }
