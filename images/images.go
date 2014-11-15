@@ -37,6 +37,11 @@ func (i ImageData) Encode() string {
 	return encData
 }
 
+func ReadImage(id int64, ir ImageRepository) (ImageModel, error) {
+	imageModel, err := ir.FindById(id)
+	return imageModel, err
+}
+
 type ImageRepository interface {
 	FindById(id int64) (ImageModel, error)
 	Delete(id int64) error
@@ -126,11 +131,11 @@ func IsEndOfRow(i int) bool {
 	return ((i > 0) && (i%4 == 0))
 }
 
-func GetImages() []ImageModel {
+func GetImages() ([]ImageModel, error) {
 	query := "SELECT id, description, tn_data FROM images"
 	result, err := database.DB.Query(query)
 	if err != nil {
-		log.Fatal("Error executing query: "+query, err)
+		return nil, err
 	}
 	images := []ImageModel{}
 	for result.Next() {
@@ -141,34 +146,32 @@ func GetImages() []ImageModel {
 		}{}
 		err := result.Scan(&data.ID, &data.Description, &data.Thumb)
 		if err != nil {
-			log.Fatal("ERROR!", err)
+			return nil, err
 		}
-		image := ImageModel{data.ID.Int64, data.Description.String, ImageData{}, ImageData{data.Thumb}}
+		image := ImageModel{ID: data.ID.Int64, Description: data.Description.String, Thumb: ImageData{data.Thumb}}
 		if image.Description == "" {
 			image.Description = "no description available"
 		}
 		images = append(images, image)
 	}
-	return images
+	return images, nil
 }
 
+// Handlers
+
 func ImagesHandler(response http.ResponseWriter, request *http.Request) {
+	thumbs, err := GetImages()
 	data := struct {
 		Page   page.Page
 		Images []ImageModel
-	}{page.Page{"Images"}, GetImages()}
+	}{page.Page{"Images"}, thumbs}
 	funcs := template.FuncMap{"IsEndOfRow": IsEndOfRow}
 	tmpl := make(map[string]*template.Template)
 	tmpl["images.tmpl"] = template.Must(template.New("").Funcs(funcs).ParseFiles("templates/base.tmpl", "templates/images.tmpl"))
-	err := tmpl["images.tmpl"].ExecuteTemplate(response, "base", data)
+	err = tmpl["images.tmpl"].ExecuteTemplate(response, "base", data)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 	}
-}
-
-func ReadImage(id int64, ir ImageRepository) (ImageModel, error) {
-	imageModel, err := ir.FindById(id)
-	return imageModel, err
 }
 
 func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
