@@ -33,12 +33,14 @@ type ImageData struct {
 }
 
 func (i ImageData) Encode() string {
-	encData := base64.StdEncoding.EncodeToString(i.Data)
-	return encData
+	return base64.StdEncoding.EncodeToString(i.Data)
 }
 
 func ReadImage(id int64, ir ImageRepository) (ImageModel, error) {
 	imageModel, err := ir.FindById(id)
+	if err != nil {
+		log.Println("Failed to read image from database!: ", err)
+	}
 	return imageModel, err
 }
 
@@ -58,27 +60,18 @@ func (i ImageDatabase) FindById(id int64) (ImageModel, error) {
 		Description sql.NullString
 		Image       []byte
 	}{}
-	err := result.Scan(&data.ID, &data.Description, &data.Image)
-	if err != nil && err != sql.ErrNoRows {
-		log.Println("Unhandled error in GetImage:", err)
+	if err := result.Scan(&data.ID, &data.Description, &data.Image); err != nil && err != sql.ErrNoRows {
 		return ImageModel{}, err
 	}
-	image := ImageModel{
-		ID:          data.ID.Int64,
-		Description: data.Description.String,
-		Image:       ImageData{data.Image},
-	}
-	return image, nil
+	return ImageModel{ID: data.ID.Int64, Description: data.Description.String, Image: ImageData{data.Image}}, nil
 }
 
 func (i ImageDatabase) Delete(id int64) error {
-	query := "DELETE FROM images WHERE id = $1"
-	stmt, err := database.DB.Prepare(query)
+	stmt, err := database.DB.Prepare("DELETE FROM images WHERE id = $1")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(id)
-	if err != nil {
+	if _, err = stmt.Exec(id); err != nil {
 		return err
 	}
 	return nil
@@ -89,25 +82,23 @@ func (i ImageDatabase) Save(im ImageModel) error {
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(im.Description, im.Image.Data, im.Thumb.Data)
-	if err != nil {
-		log.Println("Failed to save new image data to the database: ", err)
+	if _, err = stmt.Exec(im.Description, im.Image.Data, im.Thumb.Data); err != nil {
 		return err
 	}
 	return nil
 }
 
 func SaveImage(im ImageModel, ir ImageRepository) error {
-	err := ir.Save(im)
-	if err != nil {
+	if err := ir.Save(im); err != nil {
+		log.Println("Failed to save new image data to the database: ", err)
 		return err
 	}
 	return nil
 }
 
 func DeleteImage(id int64, ir ImageRepository) error {
-	err := ir.Delete(id)
-	if err != nil {
+	if err := ir.Delete(id); err != nil {
+		log.Println("Failed to delete image data to the database: ", err)
 		return err
 	}
 	return nil
@@ -120,8 +111,7 @@ func (i ImageModel) CreateThumbnail() ([]byte, error) {
 	}
 	tn := resize.Thumbnail(320, 320, image, resize.Lanczos3)
 	buf := new(bytes.Buffer)
-	err = jpeg.Encode(buf, tn, nil)
-	if err != nil {
+	if err = jpeg.Encode(buf, tn, nil); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
@@ -144,8 +134,7 @@ func GetImages() ([]ImageModel, error) {
 			Description sql.NullString
 			Thumb       []byte
 		}{}
-		err := result.Scan(&data.ID, &data.Description, &data.Thumb)
-		if err != nil {
+		if err := result.Scan(&data.ID, &data.Description, &data.Thumb); err != nil {
 			return nil, err
 		}
 		image := ImageModel{ID: data.ID.Int64, Description: data.Description.String, Thumb: ImageData{data.Thumb}}
@@ -168,8 +157,7 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 	funcs := template.FuncMap{"IsEndOfRow": IsEndOfRow}
 	tmpl := make(map[string]*template.Template)
 	tmpl["images.tmpl"] = template.Must(template.New("").Funcs(funcs).ParseFiles("templates/base.tmpl", "templates/images.tmpl"))
-	err = tmpl["images.tmpl"].ExecuteTemplate(response, "base", data)
-	if err != nil {
+	if err = tmpl["images.tmpl"].ExecuteTemplate(response, "base", data); err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -177,7 +165,7 @@ func ImagesHandler(response http.ResponseWriter, request *http.Request) {
 func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 	id, err := strconv.ParseInt(mux.Vars(request)["id"], 10, 64)
 	if err != nil {
-		panic(err)
+		log.Fatal("Can't handle int64 on this system - bailing out")
 	}
 	image, err := ReadImage(id, ImageDatabase{})
 	if err != nil {
@@ -190,8 +178,7 @@ func ImageShowHandler(response http.ResponseWriter, request *http.Request) {
 	}{page.Page{"Images"}, image}
 	tmpl := make(map[string]*template.Template)
 	tmpl["image.tmpl"] = template.Must(template.ParseFiles("templates/base.tmpl", "templates/image.tmpl"))
-	err = tmpl["image.tmpl"].ExecuteTemplate(response, "base", data)
-	if err != nil {
+	if err = tmpl["image.tmpl"].ExecuteTemplate(response, "base", data); err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -209,10 +196,11 @@ func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	newImage.Image.Data = iData
-	newImage.Thumb.Data, _ = newImage.CreateThumbnail()
-	err = SaveImage(newImage, ImageDatabase{})
+	newImage.Thumb.Data, err = newImage.CreateThumbnail()
 	if err != nil {
-		return
+		log.Println("Error creating a thumbnail from this data - not saving an image.")
+	} else {
+		SaveImage(newImage, ImageDatabase{})
 	}
 	http.Redirect(response, request, "/images", http.StatusFound)
 }
@@ -220,7 +208,7 @@ func ImagesSaveHandler(response http.ResponseWriter, request *http.Request) {
 func ImagesDeleteHandler(response http.ResponseWriter, request *http.Request) {
 	id, err := strconv.ParseInt(mux.Vars(request)["id"], 10, 64)
 	if err != nil {
-		panic(err)
+		log.Fatal("Can't handle int64 on this system - bailing out")
 	}
 	DeleteImage(id, ImageDatabase{})
 	http.Redirect(response, request, "/images", http.StatusFound)
