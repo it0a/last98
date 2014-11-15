@@ -50,7 +50,7 @@ var _ = Describe("Images", func() {
 				})
 			})
 
-			Context("when reading a non-existant ID", func() {
+			Context("when reading a non-existent ID", func() {
 
 				It("should not receive valid image data", func() {
 					imageData, _ := ReadImage("100", stubImageDatabase)
