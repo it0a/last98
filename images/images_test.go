@@ -23,7 +23,7 @@ func (stub StubImageDatabase) FindById(id string) (ImageData, error) {
 	}
 }
 
-func (stub StubImageDatabase) Save(i NewImageData) error {
+func (stub StubImageDatabase) Save(i ImageData) error {
 	return nil
 }
 
@@ -38,23 +38,23 @@ var _ = Describe("Images", func() {
 
 	Describe("image database", func() {
 
-		expected := "expected"
-		stubImageDatabase := StubImageDatabase{id: "1", imageData: ImageData{Data: expected}}
+		expected := []byte{}
+		stubImageDatabase := StubImageDatabase{id: "1", imageData: ImageData{Image: expected}}
 
 		Describe("reading from a repository", func() {
 
 			Context("we retrieve an ID that exists", func() {
 				It("should receive valid image data", func() {
 					imageData, _ := ReadImage("1", stubImageDatabase)
-					Expect(imageData.Data).To(Equal(expected))
+					Expect(imageData.Image).To(Equal(expected))
 				})
 			})
 
 			Context("when reading a non-existent ID", func() {
 
 				It("should not receive valid image data", func() {
-					imageData, _ := ReadImage("100", stubImageDatabase)
-					Expect(imageData).ShouldNot(Equal(expected))
+					image, _ := ReadImage("100", stubImageDatabase)
+					Expect(image).ShouldNot(Equal(expected))
 				})
 
 				It("should have received an error", func() {
@@ -68,7 +68,7 @@ var _ = Describe("Images", func() {
 		Describe("image creation", func() {
 			Context("when saving an image sucessfully", func() {
 				It("returns with no errors", func() {
-					err := SaveImage(NewImageData{}, stubImageDatabase)
+					err := SaveImage(ImageData{}, stubImageDatabase)
 					Expect(err).ShouldNot(HaveOccurred())
 				})
 			})
