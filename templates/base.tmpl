@@ -29,21 +29,41 @@
       <ul class="nav navbar-nav">
         <li class="active"><a href="/images">Images</a></li>
       </ul>
-      <form action="/images" enctype="multipart/form-data" method="POST" class="navbar-form navbar-right">
-        <div class="input-group">
-          <span class="input-group-btn">
-            <span class="btn btn-default btn-file">
-              Browse <input type="file" name="file" required/>
-            </span>
-          </span>
-          <input class="form-control file-label" type="text" readonly="" placeholder="No file chosen"></input>
-        </div>
-        <input class="form-control" name="description" type="text" placeholder="Description"/>
-        <button type="submit" class="btn btn-primary">Upload</button>
-      </form>
+      <button type="button" data-target="#myModal" data-toggle="modal" class="navbar-right navbar-btn btn btn-primary"><span class="glyphicon glyphicon-cloud-upload" aria-hidden="true"></span>&nbsp;&nbsp;Upload</button>
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->
 </nav>
+<!-- Button trigger modal -->
+<!-- Modal -->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">Upload Image</h4>
+      </div>
+      <div class="modal-body">
+        <form action="/images" enctype="multipart/form-data" method="POST" >
+          <div class="input-group">
+            <span class="input-group-btn">
+              <span class="btn btn-default btn-file">
+                Browse <input type="file" name="file" required/>
+              </span>
+            </span>
+            <input class="form-control file-label" type="text" readonly="" placeholder="No file chosen"></input>
+          </div>
+          <input class="form-control" name="description" type="text" placeholder="Description"/>
+          <button type="submit" class="btn btn-primary"><span class="glyphicon glyphicon-cloud-upload" aria-hidden="true"></span>&nbsp;&nbsp;Upload</button>
+        </form>
+        </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
     {{template "body" . }}
   </body>
 </html>
