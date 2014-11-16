@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/it0a/last98.svg?branch=master)](https://travis-ci.org/it0a/last98)
+
 last98
 ======
 
